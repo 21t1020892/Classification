@@ -26,10 +26,10 @@ def mlflow_input():
     st.session_state['mlflow_url'] = DAGSHUB_MLFLOW_URI
 
 @st.cache_data
-def load_mnist_data(sample_size):
+def load_mnist_data():
     dataset = get_dataset(554)
     X, y, _, _ = dataset.get_data(target=dataset.default_target_attribute)
-    X, y = X.iloc[:sample_size], y.iloc[:sample_size]
+    X, y = X.iloc[:], y.iloc[:]
     return X, y.astype(int)
 
 
@@ -262,8 +262,6 @@ def train():
                 y_pred = model.predict(X_test)
                 test_accuracy = accuracy_score(y_test, y_pred)
 
-   
-   
                 mlflow.log_metric("cv_accuracy_mean", mean_cv_score)
                 mlflow.log_metric("cv_accuracy_std", std_cv_score)
                 mlflow.log_metric("test_accuracy", test_accuracy)
