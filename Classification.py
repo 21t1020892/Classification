@@ -26,10 +26,10 @@ def mlflow_input():
     st.session_state['mlflow_url'] = DAGSHUB_MLFLOW_URI
 
 @st.cache_data
-def load_mnist_data(num_samples):
+def load_mnist_data():
     dataset = get_dataset(554)
     X, y, _, _ = dataset.get_data(target=dataset.default_target_attribute)
-    X, y = X.iloc[:num_samples], y.iloc[:num_samples]
+    X, y = X.iloc[:], y.iloc[:]
     return X, y.astype(int)
 
 
