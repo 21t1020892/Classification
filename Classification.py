@@ -26,10 +26,10 @@ def mlflow_input():
     st.session_state['mlflow_url'] = DAGSHUB_MLFLOW_URI
 
 @st.cache_data
-def load_mnist_data():
+def load_mnist_data(num_samples):
     dataset = get_dataset(554)
     X, y, _, _ = dataset.get_data(target=dataset.default_target_attribute)
-    X, y = X.iloc[:], y.iloc[:]
+    X, y = X.iloc[:num_samples], y.iloc[:num_samples]
     return X, y.astype(int)
 
 
@@ -53,27 +53,14 @@ def data():
         - Số lớp: 10 (chữ số từ 0-9)
     """)
 
-    st.subheader("Một số hình ảnh mẫu")
-    
-    # Số lượng mẫu hiển thị (giới hạn trong phạm vi dữ liệu)
-    n_samples = min(10, n_samples_total)
-
-    # Chỉ lấy mẫu nếu có đủ dữ liệu
-    if n_samples > 0:
-        fig, axes = plt.subplots(2, 5, figsize=(12, 5))
-        indices = np.random.choice(n_samples_total, n_samples, replace=False)  # Chọn chỉ mục hợp lệ
-
-        for i, idx in enumerate(indices):
-            row, col = divmod(i, 5)
-            axes[row, col].imshow(X[idx].reshape(28, 28), cmap='gray')
-            axes[row, col].set_title(f"Label: {y[idx]}")
-            axes[row, col].axis("off")
-
-        plt.tight_layout()
-        st.pyplot(fig)
-    else:
-        st.warning("⚠️ Không có dữ liệu để hiển thị!")
-
+st.subheader("Một số hình ảnh mẫu")
+def show_sample_images(X, y, num_samples=10):
+    fig, axes = plt.subplots(1, num_samples, figsize=(10, 2))
+    for i in range(num_samples):
+        axes[i].imshow(X.iloc[i].values.reshape(28, 28), cmap='gray')
+        axes[i].set_title(y.iloc[i])
+        axes[i].axis('off')
+    st.pyplot(fig)
 def split_data():
     st.title("📌 Chia dữ liệu Train/Test")
     X, y = load_mnist_data() 
@@ -261,6 +248,7 @@ def train():
 
                 y_pred = model.predict(X_test)
                 test_accuracy = accuracy_score(y_test, y_pred)
+
 
                 mlflow.log_metric("cv_accuracy_mean", mean_cv_score)
                 mlflow.log_metric("cv_accuracy_std", std_cv_score)
@@ -538,7 +526,7 @@ def main():
     
     with tab1:
         data()
-        
+        show_sample_images(X, y, num_samples=10)
     with tab2:
         split_data()
         train()
