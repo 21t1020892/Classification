@@ -27,8 +27,8 @@ def mlflow_input():
 
 
 def load_mnist_data():
-    X = np.load("buoi4/X.npy")
-    y = np.load("buoi4/y.npy")
+    X = np.load("X.npy")
+    y = np.load("y.npy")
     return X, y
 def split_data():
     st.title("📌 Chia dữ liệu Train/Test")
