@@ -7,7 +7,7 @@ from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 from streamlit_drawable_canvas import st_canvas
 from PIL import Image
-
+from sklearn.datasets import fetch_openml
 import os
 import mlflow
 from mlflow.tracking import MlflowClient
@@ -26,54 +26,89 @@ def mlflow_input():
     st.session_state['mlflow_url'] = DAGSHUB_MLFLOW_URI
 
 
+@st.cache_data
 def load_mnist_data():
-    X = np.load("X.npy")
-    y = np.load("y.npy")
+    X, y = fetch_openml('mnist_784', version=1, return_X_y=True, as_frame=False)
+    X = X.astype(np.float32) / 255.0  # Chuẩn hóa và chuyển sang float32 ngay từ đầu
     return X, y
+
+def data():
+    st.header("📘 Dữ Liệu MNIST từ OpenML")
+    
+    if "data_loaded" not in st.session_state:
+        st.session_state.data_loaded = False
+        st.session_state.X = None
+        st.session_state.y = None
+
+    if st.button("⬇️ Tải dữ liệu từ OpenML"):
+        with st.spinner("⏳ Đang tải dữ liệu MNIST từ OpenML..."):
+            X, y = load_mnist_data()
+            st.session_state.X = X
+            st.session_state.y = y
+            st.session_state.data_loaded = True
+            st.success("✅ Dữ liệu đã được tải thành công!")
+
+    if st.session_state.data_loaded:
+        X, y = st.session_state.X, st.session_state.y
+        st.write("""
+            **Thông tin tập dữ liệu MNIST:**
+            - Tổng số mẫu: {}
+            - Kích thước mỗi ảnh: 28 × 28 pixels (784 đặc trưng)
+            - Số lớp: 10 (chữ số từ 0-9)
+        """.format(X.shape[0]))
+
+        st.subheader("Một số hình ảnh mẫu")
+        n_samples = 10
+        fig, axes = plt.subplots(2, 5, figsize=(12, 5))
+        indices = np.random.choice(X.shape[0], n_samples, replace=False)
+        for i, idx in enumerate(indices):
+            row = i // 5
+            col = i % 5
+            axes[row, col].imshow(X[idx].reshape(28, 28), cmap='gray')
+            axes[row, col].set_title(f"Label: {y[idx]}")
+            axes[row, col].axis("off")
+        plt.tight_layout()
+        st.pyplot(fig)
+    else:
+        st.info("ℹ️ Nhấn nút 'Tải dữ liệu từ OpenML' để tải và hiển thị dữ liệu.")
+
 def split_data():
     st.title("📌 Chia dữ liệu Train/Test")
-
-    # Đọc dữ liệu
     X, y = load_mnist_data() 
     total_samples = X.shape[0]
 
-    
-    # Nếu chưa có cờ "data_split_done", đặt mặc định là False
     if "data_split_done" not in st.session_state:
         st.session_state.data_split_done = False  
 
-    # Thanh kéo chọn số lượng ảnh để train
     num_samples = st.slider("📌 Chọn số lượng ảnh để train:", 1000, total_samples, 10000)
-    
-    # Thanh kéo chọn tỷ lệ Train/Test
     test_size = st.slider("📌 Chọn % dữ liệu Test", 10, 50, 20)
     remaining_size = 100 - test_size
     val_size = st.slider("📌 Chọn % dữ liệu Validation (trong phần Train)", 0, 50, 15)
     st.write(f"📌 **Tỷ lệ phân chia:** Test={test_size}%, Validation={val_size}%, Train={remaining_size - val_size}%")
 
     if st.button("✅ Xác nhận & Lưu") and not st.session_state.data_split_done:
-        st.session_state.data_split_done = True  # Đánh dấu đã chia dữ liệu
+        st.session_state.data_split_done = True
         
-        # Chia dữ liệu theo tỷ lệ đã chọn
-        X_selected, _, y_selected, _ = train_test_split(
-            X, y, train_size=num_samples, stratify=y, random_state=42
-        )
+        # Step 1: Select a subset of num_samples from the full dataset
+        indices = np.random.choice(total_samples, num_samples, replace=False)
+        X_selected = X[indices]
+        y_selected = y[indices]
 
-        # Chia train/test
+        # Step 2: Split the selected subset into train+val and test
         stratify_option = y_selected if len(np.unique(y_selected)) > 1 else None
         X_train_full, X_test, y_train_full, y_test = train_test_split(
             X_selected, y_selected, test_size=test_size/100, stratify=stratify_option, random_state=42
         )
 
-        # Chia train/val
+        # Step 3: Split the train_full into train and validation
         stratify_option = y_train_full if len(np.unique(y_train_full)) > 1 else None
         X_train, X_val, y_train, y_val = train_test_split(
             X_train_full, y_train_full, test_size=val_size / (100 - test_size),
             stratify=stratify_option, random_state=42
         )
 
-        # Lưu dữ liệu vào session_state
-        st.session_state.total_samples= num_samples
+        # Store the split data in session state
+        st.session_state.total_samples = num_samples
         st.session_state.X_train = X_train
         st.session_state.X_val = X_val
         st.session_state.X_test = X_test
@@ -83,8 +118,10 @@ def split_data():
         st.session_state.test_size = X_test.shape[0]
         st.session_state.val_size = X_val.shape[0]
         st.session_state.train_size = X_train.shape[0]
+        st.session_state.df = pd.DataFrame(np.hstack((X_selected, y_selected.reshape(-1, 1))), 
+                                          columns=[f"pixel_{i}" for i in range(X_selected.shape[1])] + ["label"])
+        st.session_state.y = st.session_state.df["label"]
 
-        # Hiển thị thông tin chia dữ liệu
         summary_df = pd.DataFrame({
             "Tập dữ liệu": ["Train", "Validation", "Test"],
             "Số lượng mẫu": [X_train.shape[0], X_val.shape[0], X_test.shape[0]]
@@ -497,10 +534,10 @@ def main():
         
     st.title("🖊️ MNIST Classification App")
     
-    tab2, tab3 = st.tabs([ "⚙️ Huấn luyện", "🔢 Dự đoán"])
+    tab1, tab2, tab3 = st.tabs(["📘 Data", "⚙️ Huấn luyện", "🔢 Dự đoán"])
     
-    # with tab1:
-    #     data()
+    with tab1:
+        data()
         
     with tab2:
         split_data()
