@@ -7,7 +7,7 @@ from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 from streamlit_drawable_canvas import st_canvas
 from PIL import Image
-from openml.datasets import get_dataset
+
 import os
 import mlflow
 from mlflow.tracking import MlflowClient
@@ -18,49 +18,47 @@ import matplotlib.pyplot as plt
 
 # Hàm khởi tạo MLflow
 def mlflow_input():
-    DAGSHUB_MLFLOW_URI = "https://dagshub.com/21t1020892/Classification.mlflow"
+    DAGSHUB_MLFLOW_URI = "https://dagshub.com/TonThatTruongVu/MNIST-Classification.mlflow"
     mlflow.set_tracking_uri(DAGSHUB_MLFLOW_URI)
-    os.environ["MLFLOW_TRACKING_USERNAME"] = "21t1020892"
-    os.environ["MLFLOW_TRACKING_PASSWORD"] = "xN8@Q7V@Pbr6CYZ"
+    os.environ["MLFLOW_TRACKING_USERNAME"] = "TonThatTruongVu"
+    os.environ["MLFLOW_TRACKING_PASSWORD"] = "519c4a864e131de52197f54d170c130beb15ffd5"
     mlflow.set_experiment("MNIST_Classification")
     st.session_state['mlflow_url'] = DAGSHUB_MLFLOW_URI
 
-@st.cache_data
+
 def load_mnist_data():
-    dataset = get_dataset(554)
-    X, y, _, _ = dataset.get_data(target=dataset.default_target_attribute)
-    X, y = X.iloc[:], y.iloc[:]
-    return X, y.astype(int)
+    X = np.load("Buoi4/X.npy")
+    y = np.load("Buoi4/y.npy")
+    return X, y
 
 
 def data():
     st.header("📘 Dữ Liệu MNIST")
+    try:
+        X, y = load_mnist_data()
+        
+        st.write("""
+            **Thông tin tập dữ liệu MNIST:**
+            - Tổng số mẫu: {}
+            - Kích thước mỗi ảnh: 28 × 28 pixels (784 đặc trưng)
+            - Số lớp: 10 (chữ số từ 0-9)
+        """.format(X.shape[0]))
 
-    # Load dữ liệu
-    X, y = load_mnist_data()
-    
-    # Kiểm tra dữ liệu hợp lệ
-    if X is None or y is None:
-        st.error("⚠️ Không tìm thấy file dữ liệu `X.npy` hoặc `y.npy`")
-        return
+        st.subheader("Một số hình ảnh mẫu")
+        n_samples = 10
+        fig, axes = plt.subplots(2, 5, figsize=(12, 5))
+        indices = np.random.choice(X.shape[0], n_samples, replace=False)
+        for i, idx in enumerate(indices):
+            row = i // 5
+            col = i % 5
+            axes[row, col].imshow(X[idx].reshape(28, 28), cmap='gray')
+            axes[row, col].set_title(f"Label: {y[idx]}")
+            axes[row, col].axis("off")
+        plt.tight_layout()
+        st.pyplot(fig)
+    except FileNotFoundError:
+        st.error("⚠️ Không tìm thấy file dữ liệu `X.npy` hoặc `y.npy` trong thư mục `buoi4/`!")
 
-    n_samples_total = X.shape[0]  # Tổng số mẫu có trong dữ liệu
-
-    st.write(f"""
-        **Thông tin tập dữ liệu MNIST:**
-        - Tổng số mẫu: {n_samples_total}
-        - Kích thước mỗi ảnh: 28 × 28 pixels (784 đặc trưng)
-        - Số lớp: 10 (chữ số từ 0-9)
-    """)
-
-st.subheader("Một số hình ảnh mẫu")
-def show_sample_images(X, y, num_samples=10):
-    fig, axes = plt.subplots(1, num_samples, figsize=(10, 2))
-    for i in range(num_samples):
-        axes[i].imshow(X.iloc[i].values.reshape(28, 28), cmap='gray')
-        axes[i].set_title(y.iloc[i])
-        axes[i].axis('off')
-    st.pyplot(fig)
 def split_data():
     st.title("📌 Chia dữ liệu Train/Test")
     X, y = load_mnist_data() 
@@ -249,7 +247,8 @@ def train():
                 y_pred = model.predict(X_test)
                 test_accuracy = accuracy_score(y_test, y_pred)
 
-
+   
+   
                 mlflow.log_metric("cv_accuracy_mean", mean_cv_score)
                 mlflow.log_metric("cv_accuracy_std", std_cv_score)
                 mlflow.log_metric("test_accuracy", test_accuracy)
@@ -526,7 +525,7 @@ def main():
     
     with tab1:
         data()
-        show_sample_images(X, y, num_samples=10)
+        
     with tab2:
         split_data()
         train()
