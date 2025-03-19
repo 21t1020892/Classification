@@ -27,8 +27,8 @@ def mlflow_input():
 
 
 def load_mnist_data():
-    X = np.load("Buoi4/X.npy")
-    y = np.load("Buoi4/y.npy")
+    X = np.load("X.npy")
+    y = np.load("y.npy")
     return X, y
 
 
@@ -57,7 +57,7 @@ def data():
         plt.tight_layout()
         st.pyplot(fig)
     except FileNotFoundError:
-        st.error("⚠️ Không tìm thấy file dữ liệu `X.npy` hoặc `y.npy` trong thư mục `buoi4/`!")
+        st.error("⚠️ Không tìm thấy file dữ liệu `X.npy` hoặc `y.npy`!")
 
 def split_data():
     st.title("📌 Chia dữ liệu Train/Test")
