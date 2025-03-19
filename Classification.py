@@ -497,7 +497,7 @@ def main():
         
     st.title("🖊️ MNIST Classification App")
     
-    tab2, tab3 = st.tabs(["📘 Data", "⚙️ Huấn luyện", "🔢 Dự đoán"])
+    tab2, tab3 = st.tabs([ "⚙️ Huấn luyện", "🔢 Dự đoán"])
     
     # with tab1:
     #     data()
