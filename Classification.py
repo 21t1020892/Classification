@@ -497,10 +497,10 @@ def main():
         
     st.title("🖊️ MNIST Classification App")
     
-    tab1, tab2, tab3 = st.tabs(["📘 Data", "⚙️ Huấn luyện", "🔢 Dự đoán"])
+    tab2, tab3 = st.tabs(["📘 Data", "⚙️ Huấn luyện", "🔢 Dự đoán"])
     
-    with tab1:
-        data()
+    # with tab1:
+    #     data()
         
     with tab2:
         split_data()
